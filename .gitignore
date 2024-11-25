@@ -1,0 +1,34 @@
+# Dependências
+node_modules/
+
+# Arquivos de ambiente
+.env
+
+# Arquivos de log
+*.log
+
+# Arquivos de backup do Firebird
+*.gbk
+
+# Arquivos de build
+dist/
+build/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos de documentação local
+REGRAS_E_PASSOS.md
+PROGRESSO.md
+
+# Outros
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
