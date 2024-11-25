@@ -1,11 +1,20 @@
-# Dependências
+# No PowerShell
+echo "# Dependências
 node_modules/
 
 # Arquivos de ambiente
 .env
+.env.local
+.env.*.local
 
-# Arquivos de log
+# Logs
+logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
 # Arquivos de backup do Firebird
 *.gbk
@@ -13,6 +22,7 @@ node_modules/
 # Arquivos de build
 dist/
 build/
+out/
 
 # Arquivos do sistema
 .DS_Store
@@ -28,7 +38,23 @@ Thumbs.db
 REGRAS_E_PASSOS.md
 PROGRESSO.md
 
-# Outros
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Coverage directory
+coverage/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
