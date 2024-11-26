@@ -87,6 +87,10 @@ ENV/
 npm_error.txt
 npm_output.txt
 
+# arquivos de documentação
+PROGRESSO.md
+REGRAS_E_PASSOS.md
+
 # Arquivos de documentação temporários
 REGRAS_E_PASSOS.md
 PROGRESSO.md" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore

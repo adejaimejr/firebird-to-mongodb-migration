@@ -24,8 +24,8 @@ Uma ferramenta robusta e automatizada para migrar dados de bancos Firebird para 
 
 1. Clone o repositório:
 ```bash
-git clone [seu-repositorio]
-cd [seu-diretorio]
+git clone https://github.com/adejaimejr/firebird-to-mongodb-migration.git
+cd firebird-to-mongodb-migration
 ```
 
 2. Instale as dependências do Node.js:
@@ -125,6 +125,12 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## ✨ Agradecimentos
 
-- Equipe Linx pelo excelente ERP Millenium
+- Equipe i92Tech
 - Comunidade Firebird
 - Comunidade MongoDB
+
+## 🔗 Links
+
+- Repositório: [https://github.com/adejaimejr/firebird-to-mongodb-migration](https://github.com/adejaimejr/firebird-to-mongodb-migration)
+- Issues: [https://github.com/adejaimejr/firebird-to-mongodb-migration/issues](https://github.com/adejaimejr/firebird-to-mongodb-migration/issues)
+- Pull Requests: [https://github.com/adejaimejr/firebird-to-mongodb-migration/pulls](https://github.com/adejaimejr/firebird-to-mongodb-migration/pulls)
