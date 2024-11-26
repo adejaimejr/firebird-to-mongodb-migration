@@ -12,7 +12,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/iconv-lite": "^0.0.1",
     "dotenv": "^16.4.5",
+    "iconv-lite": "^0.6.3",
     "mongodb": "^6.3.0",
     "node-firebird": "^1.1.8",
     "ts-node": "^10.9.2",

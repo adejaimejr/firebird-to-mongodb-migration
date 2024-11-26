@@ -60,4 +60,25 @@ coverage/
 .npm
 
 # Optional eslint cache
-.eslintcache" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
+.eslintcache
+
+# Arquivos de controle
+last_processed.txt
+
+# Arquivos de banco de dados restaurados
+firebird/restored/
+
+# Arquivos Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.bak" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore

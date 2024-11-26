@@ -78,27 +78,33 @@ async function getTableCount(db: any, tableName: string): Promise<number> {
 
 async function migrateTableBatch(db: any, tableName: string, offset: number, batchSize: number, mongoCollection: any): Promise<number> {
     return new Promise((resolve, reject) => {
-        // Ajustando sintaxe para Firebird 3.0
-        const query = `SELECT FIRST ${batchSize} SKIP ${offset * batchSize} * FROM ${tableName}`;
+        const query = `SELECT FIRST ${batchSize} SKIP ${offset} * FROM ${tableName}`;
+        
         db.query(query, [], async (err: any, result: any[]) => {
             if (err) {
                 reject(err);
                 return;
             }
 
-            if (result && result.length > 0) {
-                try {
-                    // Sanitiza todos os objetos antes de inserir
-                    const transformedData = result.map(row => sanitizeObject(row));
-
-                    await mongoCollection.insertMany(transformedData, { ordered: false });
-                    resolve(result.length);
-                } catch (error) {
-                    console.error(`Erro ao inserir dados no MongoDB para tabela ${tableName}:`, error);
-                    reject(error);
-                }
-            } else {
+            if (result.length === 0) {
                 resolve(0);
+                return;
+            }
+
+            try {
+                // Sanitiza os dados
+                const sanitizedData = result.map(row => sanitizeObject(row));
+
+                // Divide em lotes menores se necessário
+                const maxBatchSize = 1000;
+                for (let i = 0; i < sanitizedData.length; i += maxBatchSize) {
+                    const batch = sanitizedData.slice(i, i + maxBatchSize);
+                    await mongoCollection.insertMany(batch, { ordered: false });
+                }
+
+                resolve(result.length);
+            } catch (error) {
+                reject(error);
             }
         });
     });
@@ -116,40 +122,49 @@ async function migrateTable(tableName: string, mongoDb: any): Promise<void> {
                 console.log(`\nIniciando migração da tabela ${tableName}`);
                 const collection = mongoDb.collection(tableName.toLowerCase());
                 
-                // Limpar collection existente se necessário
-                if (process.env.CLEAR_COLLECTIONS === 'true') {
-                    console.log(`Limpando collection ${tableName.toLowerCase()}`);
-                    await collection.deleteMany({});
+                // Limpa a collection antes de inserir
+                console.log(`Limpando collection ${tableName.toLowerCase()}`);
+                await collection.deleteMany({});
+
+                // Obtém o total de registros
+                const total = await getTableCount(db, tableName);
+                console.log(`Total de registros: ${total}`);
+
+                // Define o tamanho do lote baseado na tabela
+                // Tabelas conhecidas por terem registros grandes usam lotes menores
+                let batchSize = 25000;
+                const largeTables = ['MOV_ESTOQUE', 'PRODUTOS', 'CLIENTES'];
+                if (largeTables.includes(tableName)) {
+                    batchSize = 1000; // Lote menor para tabelas grandes
                 }
 
-                const totalRecords = await getTableCount(db, tableName);
-                console.log(`Total de registros: ${totalRecords}`);
-
-                let migratedRecords = 0;
-                let offset = 0;
-                const batchSize = mongoConfig.batchSize;
-
-                while (migratedRecords < totalRecords) {
+                let processedCount = 0;
+                while (processedCount < total) {
                     try {
-                        const recordsInBatch = await migrateTableBatch(db, tableName, offset, batchSize, collection);
-                        if (recordsInBatch === 0) break;
-
-                        migratedRecords += recordsInBatch;
-                        offset++;
-
-                        // Mostrar progresso
-                        const progress = ((migratedRecords / totalRecords) * 100).toFixed(2);
-                        console.log(`Progresso: ${progress}% (${migratedRecords}/${totalRecords})`);
-                    } catch (batchError) {
-                        console.error(`Erro no lote ${offset} da tabela ${tableName}:`, batchError);
-                        // Continua para o próximo lote mesmo se houver erro
-                        offset++;
+                        const count = await migrateTableBatch(db, tableName, processedCount, batchSize, collection);
+                        processedCount += count;
+                        
+                        // Mostra progresso
+                        if (total > 0) {
+                            const progress = Math.round((processedCount / total) * 100);
+                            console.log(`Progresso: ${progress}% (${processedCount}/${total})`);
+                        }
+                    } catch (batchError: any) {
+                        // Se der erro por tamanho, reduz o lote pela metade e tenta novamente
+                        if (batchError.code === 10334) { // BSONObjectTooLarge
+                            batchSize = Math.max(100, Math.floor(batchSize / 2));
+                            console.log(`Reduzindo tamanho do lote para ${batchSize} e tentando novamente...`);
+                            continue;
+                        }
+                        throw batchError;
                     }
                 }
 
+                console.log(`✅ Tabela ${tableName} migrada com sucesso`);
                 db.detach();
                 resolve();
             } catch (error) {
+                console.error(`Erro ao migrar tabela ${tableName}:`, error);
                 db.detach();
                 reject(error);
             }
