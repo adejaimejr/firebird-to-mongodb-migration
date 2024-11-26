@@ -38,8 +38,8 @@ Thumbs.db
 *.swo
 
 # Arquivos de documentação local
-REGRAS_E_PASSOS.md
-PROGRESSO.md
+# REGRAS_E_PASSOS.md
+# PROGRESSO.md
 
 # Runtime data
 pids
@@ -81,4 +81,12 @@ ENV/
 # Arquivos temporários
 *.tmp
 *.temp
-*.bak" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
+*.bak
+
+# Arquivos temporários do npm
+npm_error.txt
+npm_output.txt
+
+# Arquivos de documentação temporários
+REGRAS_E_PASSOS.md
+PROGRESSO.md" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
