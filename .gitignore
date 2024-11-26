@@ -93,4 +93,12 @@ REGRAS_E_PASSOS.md
 
 # Arquivos de documentação temporários
 REGRAS_E_PASSOS.md
-PROGRESSO.md" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
+PROGRESSO.md
+
+# Scripts obsoletos
+create_shortcut.vbs
+create_startup.vbs
+run_migration.bat
+start_hidden.bat
+start_scheduler.bat
+run_scheduler.vbs" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
