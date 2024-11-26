@@ -18,6 +18,9 @@ lerna-debug.log*
 
 # Arquivos de backup do Firebird
 *.gbk
+*.FDB
+*.fdb
+*.gbk.checkpoint
 
 # Arquivos de build
 dist/
