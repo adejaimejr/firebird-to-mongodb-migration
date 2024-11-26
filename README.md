@@ -75,6 +75,37 @@ O script irá:
 - Migrar todas as tabelas para MongoDB
 - Registrar o arquivo processado
 
+## 🕒 Agendamento
+
+Para executar a migração automaticamente a cada 1 hora:
+
+1. Abra o PowerShell como Administrador
+
+2. Navegue até o diretório do projeto:
+```powershell
+cd caminho/do/projeto
+```
+
+3. Execute o script de configuração:
+```powershell
+.\setup_scheduler.ps1
+```
+
+O script irá:
+- Criar uma tarefa agendada no Windows
+- Executar a migração a cada 1 hora
+- Usar privilégios de sistema para garantir acesso
+
+Para verificar o status:
+1. Abra o Agendador de Tarefas do Windows
+2. Procure por "FirebirdToMongoMigration"
+3. Verifique o histórico de execuções
+
+Para desativar o agendamento:
+```powershell
+Unregister-ScheduledTask -TaskName "FirebirdToMongoMigration" -Confirm:$false
+```
+
 ## ⚙️ Configuração
 
 Edite o arquivo `.env` com suas configurações:
@@ -102,9 +133,9 @@ Os logs são gerados com informações detalhadas sobre:
 
 ## 🔍 Exemplo: ERP Millenium
 
-Este projeto foi otimizado para trabalhar com o ERP Millenium da Linx, mas pode ser usado com qualquer banco Firebird. Para o Millenium:
+Este projeto foi otimizado para trabalhar com o ERP e-Millenium da Linx, mas pode ser usado com qualquer banco Firebird. Para o e-Millenium:
 
-1. Configure o backup automático no Millenium para gerar arquivos .gbk
+1. Configure o backup automático no e-Millenium para gerar arquivos .gbk
 2. Coloque os arquivos na pasta `gbk/`
 3. Execute a migração
 4. Os dados estarão disponíveis no MongoDB com a mesma estrutura
