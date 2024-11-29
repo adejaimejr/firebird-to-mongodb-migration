@@ -1,6 +1,10 @@
 # No PowerShell
 echo "# Dependências
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Arquivos de ambiente
 .env
@@ -8,7 +12,7 @@ node_modules/
 .env.*.local
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -38,67 +42,21 @@ Thumbs.db
 *.swo
 
 # Arquivos de documentação local
-# REGRAS_E_PASSOS.md
-# PROGRESSO.md
+*.md
+!README.md
 
 # Runtime data
-pids
+pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Diagnostic reports
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+# Dados e banco de dados
+data/
+database/
 
-# Coverage directory
-coverage/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Arquivos de controle
-last_processed.txt
-
-# Arquivos de banco de dados restaurados
-firebird/restored/
-
-# Arquivos Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
+# Ambiente virtual
 venv/
 ENV/
-
-# Arquivos temporários
-*.tmp
-*.temp
-*.bak
-
-# Arquivos temporários do npm
-npm_error.txt
-npm_output.txt
-
-# arquivos de documentação
-PROGRESSO.md
-REGRAS_E_PASSOS.md
-
-# Arquivos de documentação temporários
-REGRAS_E_PASSOS.md
-PROGRESSO.md
-
-# Scripts obsoletos
-create_shortcut.vbs
-create_startup.vbs
-run_migration.bat
-start_hidden.bat
-start_scheduler.bat
-run_scheduler.vbs" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore
+env/
+.venv/" > C:\i92tech\import_firebird_mongo\new_versao\.gitignore

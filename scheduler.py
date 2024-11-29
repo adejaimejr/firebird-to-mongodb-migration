@@ -1,7 +1,3 @@
-import win32api
-import win32con
-import win32gui
-import win32process
 import signal
 import sys
 import threading
@@ -98,14 +94,19 @@ def update_icon_text():
 def update_icon_status(status='normal'):
     """Atualiza o ícone de acordo com o status"""
     global icon
-    if icon:
-        if status == 'error':
-            icon.icon = create_sync_icon('red')
-        elif status == 'running':
-            icon.icon = create_sync_icon('green')
-        else:
-            icon.icon = create_sync_icon('blue')
-        icon.title = update_icon_text()
+    try:
+        if icon:
+            if status == 'error':
+                new_icon = create_sync_icon('red')
+            elif status == 'running':
+                new_icon = create_sync_icon('green')
+            else:
+                new_icon = create_sync_icon('blue')
+            
+            icon.icon = new_icon
+            icon.title = update_icon_text()
+    except Exception as e:
+        logging.error(f"Erro ao atualizar ícone: {str(e)}")
 
 def run_migration():
     """Executa a migração"""
@@ -133,14 +134,13 @@ def run_migration():
         next_run = datetime.fromtimestamp(time.time() + 3600)
         is_error = False
         
-        update_icon_status('running')
         logging.info("Migração concluída com sucesso")
+        update_icon_status('normal')
         
     except Exception as e:
         logging.error(f"Erro ao executar migração: {str(e)}")
         is_error = True
         update_icon_status('error')
-        raise
 
 def migration_loop():
     """Loop principal de migração"""
@@ -156,8 +156,9 @@ def migration_loop():
                     break
                 time.sleep(1)
         except Exception as e:
-            logging.error(f"Erro no scheduler: {str(e)}")
-            for _ in range(60):  # Sleep menor em caso de erro
+            logging.error(f"Erro no loop do scheduler: {str(e)}")
+            # Em caso de erro, aguarda 1 minuto antes de tentar novamente
+            for _ in range(60):
                 if not running or stop_event.is_set():
                     break
                 time.sleep(1)
@@ -201,34 +202,46 @@ def on_stop(icon, item):
 def on_restart(icon, item):
     """Reinicia a migração"""
     on_stop(icon, item)
-    time.sleep(1)
+    time.sleep(1)  # Pequena pausa para garantir que parou
     on_start(icon, item)
-    logging.info("Scheduler reiniciado")
 
 def on_exit(icon, item):
     """Encerra o programa"""
-    on_stop(icon, item)
-    icon.stop()
-    force_kill_python()
+    try:
+        if running:
+            on_stop(icon, item)
+        icon.stop()
+        logging.info("Scheduler encerrado pelo usuário")
+        sys.exit(0)
+    except Exception as e:
+        logging.error(f"Erro ao encerrar scheduler: {str(e)}")
+        sys.exit(1)
 
 def create_icon():
     """Cria o ícone na barra de tarefas"""
-    image = create_sync_icon()
+    global icon
+    
     menu = pystray.Menu(
-        pystray.MenuItem("Iniciar", on_start, default=True),
+        pystray.MenuItem("Iniciar", on_start, default=True),  # Define Iniciar como ação padrão
         pystray.MenuItem("Parar", on_stop),
         pystray.MenuItem("Reiniciar", on_restart),
         pystray.MenuItem("Sair", on_exit)
     )
-    return pystray.Icon("scheduler", image, "Scheduler de Migração", menu)
+    
+    icon = pystray.Icon(
+        "scheduler",
+        create_sync_icon(),
+        "Scheduler de Migração",
+        menu
+    )
+    
+    icon.run()
 
 if __name__ == "__main__":
     logging.info("Iniciando scheduler de migração")
     
     try:
-        icon = create_icon()
-        logging.info("Ícone criado com sucesso")
-        icon.run()
+        create_icon()
     except Exception as e:
-        logging.error(f"Erro ao iniciar o scheduler: {str(e)}")
+        logging.error(f"Erro ao criar ícone: {str(e)}")
         sys.exit(1)
