@@ -321,13 +321,11 @@ class FirebirdMigration:
             # Encontra o GBK mais recente
             latest_gbk = self.get_latest_gbk()
             if latest_gbk is None:
-                logger.info("Nenhum arquivo novo para processar.")
                 return True
                 
             # Verifica se já foi processado
             gbk_filename = os.path.basename(latest_gbk)
             if self.was_file_processed(gbk_filename):
-                logger.info(f"Arquivo {gbk_filename} já foi processado anteriormente.")
                 return True
             
             # Registra o arquivo que será processado
@@ -355,8 +353,7 @@ class FirebirdMigration:
             # Salva o arquivo processado
             self.save_last_processed_gbk(latest_gbk)
             
-            logger.info("Processo completo executado com sucesso!")
-            return True
+            return False  # Retorna False quando processou um arquivo
             
         except Exception as e:
             logger.error(f"Erro durante o processo: {str(e)}")

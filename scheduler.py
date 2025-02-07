@@ -6,9 +6,16 @@ import logging
 from datetime import datetime
 import importlib.util
 import os
+from dotenv import load_dotenv
 import pystray
 from PIL import Image, ImageDraw
 import io
+
+# Carrega variáveis de ambiente
+load_dotenv()
+
+# Configuração do intervalo do scheduler (em minutos)
+SCHEDULER_INTERVAL = int(os.getenv('SCHEDULER_INTERVAL', '60'))  # Padrão: 60 minutos
 
 # Configuração do logging
 log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
@@ -33,6 +40,7 @@ next_run = None
 icon = None
 is_error = False
 stop_event = threading.Event()
+current_interval = int(os.getenv('SCHEDULER_INTERVAL', '60'))
 
 def handler_stop_signals(signum, frame):
     """Handler para sinais de parada"""
@@ -128,13 +136,17 @@ def run_migration():
         
         # Cria e executa a migração
         migration = automacao.FirebirdMigration()
-        migration.run()
+        result = migration.run()
         
         last_run = datetime.now()
-        next_run = datetime.fromtimestamp(time.time() + 3600)
+        next_run = datetime.fromtimestamp(time.time() + (current_interval * 60))
         is_error = False
         
-        logging.info("Migração concluída com sucesso")
+        # Se não houver arquivos para processar, log mais conciso
+        if result is True:  # Quando retorna True significa que não havia arquivos novos
+            logging.info(f"Verificação concluída - Nenhum arquivo novo. Próxima execução em {format_interval(current_interval)}")
+        else:
+            logging.info(f"Migração concluída com sucesso. Próxima execução em {format_interval(current_interval)}")
         update_icon_status('normal')
         
     except Exception as e:
@@ -144,12 +156,12 @@ def run_migration():
 
 def migration_loop():
     """Loop principal de migração"""
-    global running, migration_thread, stop_event
-    interval = 3600  # 1 hora em segundos
+    global running, migration_thread, stop_event, current_interval
     
     while running and not stop_event.is_set():
         try:
             run_migration()
+            interval = current_interval * 60  # Converte minutos para segundos
             # Divide o sleep em intervalos menores para responder mais rápido ao stop
             for _ in range(interval):
                 if not running or stop_event.is_set():
@@ -207,41 +219,147 @@ def on_restart(icon, item):
 
 def on_exit(icon, item):
     """Encerra o programa"""
+    global running
     try:
-        if running:
-            on_stop(icon, item)
-        icon.stop()
         logging.info("Scheduler encerrado pelo usuário")
-        sys.exit(0)
+        running = False
+        stop_event.set()
+        
+        if migration_thread and migration_thread.is_alive():
+            migration_thread.join(timeout=5)
+            if migration_thread.is_alive():
+                force_kill_python()
+        
+        icon.stop()
     except Exception as e:
         logging.error(f"Erro ao encerrar scheduler: {str(e)}")
-        sys.exit(1)
+
+def on_interval_1(icon, item):
+    """Define intervalo para 1 minuto"""
+    change_interval(1)
+
+def on_interval_5(icon, item):
+    """Define intervalo para 5 minutos"""
+    change_interval(5)
+
+def on_interval_10(icon, item):
+    """Define intervalo para 10 minutos"""
+    change_interval(10)
+
+def on_interval_15(icon, item):
+    """Define intervalo para 15 minutos"""
+    change_interval(15)
+
+def on_interval_30(icon, item):
+    """Define intervalo para 30 minutos"""
+    change_interval(30)
+
+def on_interval_60(icon, item):
+    """Define intervalo para 60 minutos (1 hora)"""
+    change_interval(60)
+
+def on_interval_120(icon, item):
+    """Define intervalo para 120 minutos (2 horas)"""
+    change_interval(120)
+
+def on_interval_360(icon, item):
+    """Define intervalo para 360 minutos (6 horas)"""
+    change_interval(360)
+
+def on_interval_720(icon, item):
+    """Define intervalo para 720 minutos (12 horas)"""
+    change_interval(720)
+
+def on_interval_1440(icon, item):
+    """Define intervalo para 1440 minutos (24 horas)"""
+    change_interval(1440)
+
+def format_interval(minutes):
+    """Formata o intervalo para exibição"""
+    if minutes < 60:
+        return f"{minutes} minutos"
+    elif minutes == 60:
+        return "1 hora"
+    elif minutes < 1440:
+        hours = minutes / 60
+        return f"{hours:.0f} horas"
+    else:
+        days = minutes / 1440
+        return f"{days:.0f} dia{'s' if days > 1 else ''}"
+
+def change_interval(minutes):
+    """Altera o intervalo do scheduler e reinicia se estiver rodando"""
+    global current_interval, running
+    current_interval = minutes
+    
+    # Atualiza o arquivo .env
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    with open(env_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    
+    # Procura e atualiza a linha do SCHEDULER_INTERVAL
+    found = False
+    for i, line in enumerate(lines):
+        if line.startswith('SCHEDULER_INTERVAL='):
+            lines[i] = f'SCHEDULER_INTERVAL={minutes}  # Intervalo em minutos entre as execuções\n'
+            found = True
+            break
+    
+    # Se não encontrou, adiciona ao final
+    if not found:
+        lines.append(f'\n# Configuração do Scheduler\nSCHEDULER_INTERVAL={minutes}  # Intervalo em minutos entre as execuções\n')
+    
+    # Salva o arquivo
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+    
+    logging.info(f"Intervalo alterado para {format_interval(minutes)}")
+    
+    # Se estiver rodando, reinicia para aplicar novo intervalo
+    if running:
+        on_restart(icon, None)
 
 def create_icon():
     """Cria o ícone na barra de tarefas"""
     global icon
     
-    menu = pystray.Menu(
-        pystray.MenuItem("Iniciar", on_start, default=True),  # Define Iniciar como ação padrão
+    # Cria o menu
+    menu = (
+        pystray.MenuItem("Iniciar", on_start),
         pystray.MenuItem("Parar", on_stop),
         pystray.MenuItem("Reiniciar", on_restart),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem("Intervalo", pystray.Menu(
+            pystray.MenuItem("1 minuto", on_interval_1),
+            pystray.MenuItem("5 minutos", on_interval_5),
+            pystray.MenuItem("10 minutos", on_interval_10),
+            pystray.MenuItem("15 minutos", on_interval_15),
+            pystray.MenuItem("30 minutos", on_interval_30),
+            pystray.MenuItem("1 hora", on_interval_60),
+            pystray.MenuItem("2 horas", on_interval_120),
+            pystray.MenuItem("6 horas", on_interval_360),
+            pystray.MenuItem("12 horas", on_interval_720),
+            pystray.MenuItem("24 horas", on_interval_1440),
+        )),
+        pystray.Menu.SEPARATOR,
         pystray.MenuItem("Sair", on_exit)
     )
     
+    # Cria o ícone
     icon = pystray.Icon(
-        "scheduler",
+        "migration_scheduler",
         create_sync_icon(),
         "Scheduler de Migração",
         menu
     )
     
-    icon.run()
+    return icon
 
 if __name__ == "__main__":
     logging.info("Iniciando scheduler de migração")
     
     try:
-        create_icon()
+        create_icon().run()
     except Exception as e:
         logging.error(f"Erro ao criar ícone: {str(e)}")
         sys.exit(1)

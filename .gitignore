@@ -42,7 +42,7 @@ Thumbs.db
 *.swo
 
 # Arquivos de documentação local
-*.md
+#*.md
 !README.md
 
 # Runtime data
