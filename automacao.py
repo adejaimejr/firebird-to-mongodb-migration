@@ -7,6 +7,7 @@ import time
 import threading
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 from prepare_backup import prepare_backup
 
 # Nome do arquivo de log
@@ -313,10 +314,51 @@ class FirebirdMigration:
             logger.error(f"Erro durante a migração: {str(e)}")
             raise
 
+    def cleanup_old_backups(self):
+        """Remove backups mais antigos que X dias conforme configuração do .env"""
+        try:
+            # Carrega configurações do .env
+            load_dotenv()
+            remove_old = os.getenv('REMOVE_OLD_BACKUPS', 'false').lower() == 'true'
+            days = int(os.getenv('REMOVE_OLD_BACKUPS_DAYS', '7'))
+            
+            if not remove_old:
+                return
+                
+            logger.info(f"Verificando backups mais antigos que {days} dias...")
+            
+            # Lista todos os arquivos .gbk
+            gbk_files = glob.glob(os.path.join(self.gbk_dir, '*.gbk'))
+            if not gbk_files:
+                return
+                
+            # Data atual
+            now = datetime.now().timestamp()
+            
+            # Remove arquivos mais antigos que X dias
+            for gbk_file in gbk_files:
+                try:
+                    file_time = os.path.getmtime(gbk_file)
+                    age_days = (now - file_time) / (24 * 3600)  # Converte segundos para dias
+                    
+                    if age_days > days:
+                        os.remove(gbk_file)
+                        logger.info(f"Backup antigo removido: {os.path.basename(gbk_file)} (idade: {int(age_days)} dias)")
+                except Exception as e:
+                    logger.error(f"Erro ao remover backup antigo {gbk_file}: {str(e)}")
+                    
+        except Exception as e:
+            logger.error(f"Erro durante limpeza de backups antigos: {str(e)}")
+
     def run(self):
         """Executa todo o processo"""
         try:
             logger.info("Iniciando processo de automação...")
+            
+            # Tenta preparar novo backup primeiro
+            if not prepare_backup():
+                logger.info("Nenhum backup novo para preparar")
+                return True
             
             # Encontra o GBK mais recente
             latest_gbk = self.get_latest_gbk()
@@ -331,16 +373,6 @@ class FirebirdMigration:
             # Registra o arquivo que será processado
             logger.info(f"Arquivo GBK mais recente encontrado: {latest_gbk}")
             
-            # Tenta preparar novo backup se necessário
-            if not prepare_backup():
-                logger.error("Falha na preparação do backup. Abortando processo.")
-                return False
-            
-            # Verifica novamente se o arquivo não foi processado durante a preparação
-            if self.was_file_processed(gbk_filename):
-                logger.info(f"Arquivo {gbk_filename} foi processado durante a preparação. Abortando.")
-                return True
-            
             # Remove banco existente
             self.remove_existing_db()
             
@@ -352,6 +384,9 @@ class FirebirdMigration:
             
             # Salva o arquivo processado
             self.save_last_processed_gbk(latest_gbk)
+            
+            # Limpa backups antigos
+            self.cleanup_old_backups()
             
             return False  # Retorna False quando processou um arquivo
             
