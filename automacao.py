@@ -7,6 +7,7 @@ import time
 import threading
 from datetime import datetime
 from pathlib import Path
+from prepare_backup import prepare_backup
 
 # Nome do arquivo de log
 LOG_FILE = 'automacao.log'
@@ -53,17 +54,23 @@ class FirebirdMigration:
         try:
             if os.path.exists(self.last_processed_file):
                 with open(self.last_processed_file, 'r') as f:
-                    return f.read().strip()
-            return None
+                    # Lê todas as linhas e remove espaços em branco
+                    return [line.strip() for line in f.readlines() if line.strip()]
+            return []
         except Exception as e:
             logger.warning(f"Erro ao ler arquivo de controle: {str(e)}")
-            return None
+            return []
+
+    def was_file_processed(self, filename):
+        """Verifica se um arquivo já foi processado anteriormente"""
+        processed_files = self.get_last_processed_gbk()
+        return filename in processed_files
 
     def save_last_processed_gbk(self, gbk_file):
         """Salva o nome do último arquivo GBK processado"""
         try:
-            with open(self.last_processed_file, 'w') as f:
-                f.write(os.path.basename(gbk_file))
+            with open(self.last_processed_file, 'a') as f:
+                f.write(os.path.basename(gbk_file) + '\n')
             logger.info(f"Arquivo de controle atualizado: {os.path.basename(gbk_file)}")
         except Exception as e:
             logger.error(f"Erro ao salvar arquivo de controle: {str(e)}")
@@ -90,11 +97,8 @@ class FirebirdMigration:
                 return latest_gbk
             
             # Procura por arquivos mais recentes que o último processado
-            last_processed_path = os.path.join(self.gbk_dir, last_processed)
-            last_processed_time = os.path.getmtime(last_processed_path) if os.path.exists(last_processed_path) else 0
-            
             for gbk_file in gbk_files:
-                if os.path.getmtime(gbk_file) > last_processed_time:
+                if os.path.basename(gbk_file) not in last_processed:
                     logger.info(f"Arquivo GBK mais recente encontrado: {gbk_file}")
                     return gbk_file
             
@@ -316,11 +320,28 @@ class FirebirdMigration:
             
             # Encontra o GBK mais recente
             latest_gbk = self.get_latest_gbk()
+            if latest_gbk is None:
+                logger.info("Nenhum arquivo novo para processar.")
+                return True
+                
+            # Verifica se já foi processado
+            gbk_filename = os.path.basename(latest_gbk)
+            if self.was_file_processed(gbk_filename):
+                logger.info(f"Arquivo {gbk_filename} já foi processado anteriormente.")
+                return True
             
-            # Se não houver arquivo novo, encerra
-            if not latest_gbk:
-                logger.info("Nenhum arquivo novo para processar. Encerrando.")
-                return
+            # Registra o arquivo que será processado
+            logger.info(f"Arquivo GBK mais recente encontrado: {latest_gbk}")
+            
+            # Tenta preparar novo backup se necessário
+            if not prepare_backup():
+                logger.error("Falha na preparação do backup. Abortando processo.")
+                return False
+            
+            # Verifica novamente se o arquivo não foi processado durante a preparação
+            if self.was_file_processed(gbk_filename):
+                logger.info(f"Arquivo {gbk_filename} foi processado durante a preparação. Abortando.")
+                return True
             
             # Remove banco existente
             self.remove_existing_db()
@@ -335,6 +356,7 @@ class FirebirdMigration:
             self.save_last_processed_gbk(latest_gbk)
             
             logger.info("Processo completo executado com sucesso!")
+            return True
             
         except Exception as e:
             logger.error(f"Erro durante o processo: {str(e)}")
